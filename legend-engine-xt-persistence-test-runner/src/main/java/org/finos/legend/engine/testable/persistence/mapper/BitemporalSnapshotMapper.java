@@ -14,9 +14,12 @@
 
 package org.finos.legend.engine.testable.persistence.mapper;
 
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.DatasetType;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.persister.ingestmode.snapshot.BitemporalSnapshot;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.Bitemporal;
+import org.finos.legend.engine.testable.persistence.mapper.v1.MappingVisitors;
 
-import static org.finos.legend.engine.testable.persistence.mapper.IngestModeMapper.DIGEST_FIELD_DEFAULT;
+import static org.finos.legend.engine.testable.persistence.mapper.v1.IngestModeMapper.DIGEST_FIELD_DEFAULT;
 
 public class BitemporalSnapshotMapper
 {
@@ -26,6 +29,16 @@ public class BitemporalSnapshotMapper
                 .digestField(DIGEST_FIELD_DEFAULT)
                 .transactionMilestoning(bitemporalSnapshot.transactionMilestoning.accept(MappingVisitors.MAP_TO_COMPONENT_TRANSACTION_MILESTONING))
                 .validityMilestoning(bitemporalSnapshot.validityMilestoning.accept(MappingVisitors.MAP_TO_COMPONENT_VALIDITY_MILESTONING))
+                .build();
+    }
+
+    public static org.finos.legend.engine.persistence.components.ingestmode.BitemporalSnapshot from(Bitemporal temporality, DatasetType datasetType)
+    {
+
+        return org.finos.legend.engine.persistence.components.ingestmode.BitemporalSnapshot.builder()
+                .digestField(DIGEST_FIELD_DEFAULT)
+                .transactionMilestoning(temporality.processingDimension.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_PROCESSING_DIMENSION))
+                .validityMilestoning(temporality.sourceDerivedDimension.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_SOURCE_DERIVED_DIMENSION))
                 .build();
     }
 }

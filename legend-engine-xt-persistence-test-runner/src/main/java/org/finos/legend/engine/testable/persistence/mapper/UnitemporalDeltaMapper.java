@@ -14,9 +14,13 @@
 
 package org.finos.legend.engine.testable.persistence.mapper;
 
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.DatasetType;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.Delta;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.persister.ingestmode.delta.UnitemporalDelta;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.Unitemporal;
+import org.finos.legend.engine.testable.persistence.mapper.v1.MappingVisitors;
 
-import static org.finos.legend.engine.testable.persistence.mapper.IngestModeMapper.DIGEST_FIELD_DEFAULT;
+import static org.finos.legend.engine.testable.persistence.mapper.v1.IngestModeMapper.DIGEST_FIELD_DEFAULT;
 
 public class UnitemporalDeltaMapper
 {
@@ -26,6 +30,16 @@ public class UnitemporalDeltaMapper
                 .digestField(DIGEST_FIELD_DEFAULT)
                 .mergeStrategy(unitemporalDelta.mergeStrategy.accept(MappingVisitors.MAP_TO_COMPONENT_MERGE_STRATEGY))
                 .transactionMilestoning(unitemporalDelta.transactionMilestoning.accept(MappingVisitors.MAP_TO_COMPONENT_TRANSACTION_MILESTONING))
+                .build();
+    }
+
+    public static org.finos.legend.engine.persistence.components.ingestmode.UnitemporalDelta from(Unitemporal temporality, DatasetType datasetType)
+    {
+
+        return org.finos.legend.engine.persistence.components.ingestmode.UnitemporalDelta.builder()
+                .digestField(DIGEST_FIELD_DEFAULT)
+                .mergeStrategy(((Delta)datasetType).actionIndicator.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_DELETE_STRATEGY))
+                .transactionMilestoning(temporality.processingDimension.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_PROCESSING_DIMENSION))
                 .build();
     }
 }
