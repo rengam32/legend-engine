@@ -15,10 +15,8 @@
 package org.finos.legend.engine.protocol.pure.v1.model.packageableElement.mapping.mappingTest;
 
 import org.finos.legend.engine.protocol.pure.v1.model.test.TestSuite;
-import org.finos.legend.engine.protocol.pure.v1.model.valueSpecification.raw.Lambda;
 
 
-public class MappingTestSuite extends TestSuite
+public abstract class MappingTestSuite extends TestSuite
 {
-    public Lambda func;
 }
