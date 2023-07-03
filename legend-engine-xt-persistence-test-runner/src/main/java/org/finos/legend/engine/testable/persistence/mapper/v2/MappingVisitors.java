@@ -87,7 +87,7 @@ public class MappingVisitors
                         .addAllDeleteValues(val.deleteValues)
                         .build();
             }
-            //todo (rengam) : Delete field for Graph fetch?
+            //todo: Delete field for Graph fetch?
             return DeleteIndicatorMergeStrategy.builder()
                     //.deleteField(((DeleteIndicatorForGraphFetch) val).deleteFieldPath)
                     .addAllDeleteValues(val.deleteValues)
@@ -118,10 +118,10 @@ public class MappingVisitors
         public TransactionMilestoning visitBatchIdAndDateTime(org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.processing.BatchIdAndDateTime val)
         {
             return BatchIdAndDateTime.of(
-                    val.batchIdIn == null || val.batchIdIn.isEmpty() ? BATCH_ID_IN_FIELD_DEFAULT : val.batchIdIn,
-                    val.batchIdOut == null || val.batchIdOut.isEmpty() ? BATCH_ID_OUT_FIELD_DEFAULT : val.batchIdOut,
-                    val.timeIn == null || val.timeIn.isEmpty() ? BATCH_TIME_IN_FIELD_DEFAULT : val.timeIn,
-                    val.timeOut == null || val.timeOut.isEmpty() ? BATCH_TIME_OUT_FIELD_DEFAULT : val.timeOut);
+                    val.batchIdIn,
+                    val.batchIdOut,
+                    val.timeIn,
+                    val.timeOut);
         }
     };
 
@@ -178,8 +178,6 @@ public class MappingVisitors
         @Override
         public Void visitDeleteIndicator(DeleteIndicator val)
         {
-            if (val instanceof DeleteIndicatorForTds)
-            {
                 if (val instanceof DeleteIndicatorForTds && !isFieldNamePresent(baseSchema, ((DeleteIndicatorForTds) val).deleteField))
                 {
                     Field deleted = Field.builder()
@@ -188,8 +186,7 @@ public class MappingVisitors
                             .build();
                     fieldsToAdd.add(deleted);
                 }
-            }
-            //todo (rengam) : Delete field for Graph fetch?
+            //todo: Delete field for Graph fetch?
             return null;
         }
     }

@@ -21,6 +21,7 @@ import org.finos.legend.engine.persistence.components.ingestmode.deduplication.F
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.DatasetType;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.persister.ingestmode.appendonly.AppendOnly;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.Nontemporal;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.auditing.NoAuditing;
 import org.finos.legend.engine.testable.persistence.mapper.v1.MappingVisitors;
 
 import static org.finos.legend.engine.testable.persistence.mapper.v1.IngestModeMapper.DIGEST_FIELD_DEFAULT;
@@ -42,6 +43,10 @@ public class AppendOnlyMapper
     public static org.finos.legend.engine.persistence.components.ingestmode.AppendOnly from(Nontemporal temporality, DatasetType datasetType)
     {
         DeduplicationStrategy deduplicationStrategy;
+        if (temporality.auditing == null)
+        {
+            temporality.auditing = new NoAuditing();
+        }
         org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.updatesHandling.AppendOnly appendOnlyHandling = (org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.updatesHandling.AppendOnly) temporality.updatesHandling;
         if (appendOnlyHandling.appendStrategy instanceof org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.updatesHandling.appendStrategy.FilterDuplicates)
         {

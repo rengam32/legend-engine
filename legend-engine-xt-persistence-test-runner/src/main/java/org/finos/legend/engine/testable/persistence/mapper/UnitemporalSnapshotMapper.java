@@ -15,6 +15,9 @@
 package org.finos.legend.engine.testable.persistence.mapper;
 
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.DatasetType;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.Snapshot;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.partitioning.FieldBasedForTds;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.partitioning.Partitioning;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.persister.ingestmode.snapshot.UnitemporalSnapshot;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.Unitemporal;
 import org.finos.legend.engine.testable.persistence.mapper.v1.MappingVisitors;
@@ -33,7 +36,20 @@ public class UnitemporalSnapshotMapper
 
     public static org.finos.legend.engine.persistence.components.ingestmode.UnitemporalSnapshot from(Unitemporal temporality, DatasetType datasetType)
     {
-
+        Partitioning partition =  ((Snapshot) datasetType).partitioning;
+        if (partition != null)
+        {
+            //todo: add support for FieldBasedForGraphFetch
+            if (partition instanceof FieldBasedForTds)
+            {
+                FieldBasedForTds fieldBasedForTds = (FieldBasedForTds) partition;
+                return org.finos.legend.engine.persistence.components.ingestmode.UnitemporalSnapshot.builder()
+                        .digestField(DIGEST_FIELD_DEFAULT)
+                        .addAllPartitionFields(fieldBasedForTds.partitionFields)
+                        .transactionMilestoning(temporality.processingDimension.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_PROCESSING_DIMENSION))
+                        .build();
+            }
+        }
         return org.finos.legend.engine.persistence.components.ingestmode.UnitemporalSnapshot.builder()
                 .digestField(DIGEST_FIELD_DEFAULT)
                 .transactionMilestoning(temporality.processingDimension.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_PROCESSING_DIMENSION))

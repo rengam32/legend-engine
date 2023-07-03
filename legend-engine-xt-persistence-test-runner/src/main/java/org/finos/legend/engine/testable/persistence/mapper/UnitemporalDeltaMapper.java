@@ -16,6 +16,7 @@ package org.finos.legend.engine.testable.persistence.mapper;
 
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.DatasetType;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.Delta;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.actionindicator.NoActionIndicator;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.persister.ingestmode.delta.UnitemporalDelta;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.Unitemporal;
 import org.finos.legend.engine.testable.persistence.mapper.v1.MappingVisitors;
@@ -35,7 +36,10 @@ public class UnitemporalDeltaMapper
 
     public static org.finos.legend.engine.persistence.components.ingestmode.UnitemporalDelta from(Unitemporal temporality, DatasetType datasetType)
     {
-
+        if (((Delta) datasetType).actionIndicator == null)
+        {
+            ((Delta) datasetType).actionIndicator = new NoActionIndicator();
+        }
         return org.finos.legend.engine.persistence.components.ingestmode.UnitemporalDelta.builder()
                 .digestField(DIGEST_FIELD_DEFAULT)
                 .mergeStrategy(((Delta)datasetType).actionIndicator.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_DELETE_STRATEGY))

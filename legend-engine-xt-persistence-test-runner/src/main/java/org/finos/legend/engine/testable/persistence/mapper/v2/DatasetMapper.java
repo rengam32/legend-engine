@@ -22,15 +22,12 @@ import org.finos.legend.engine.persistence.components.logicalplan.datasets.Field
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.FieldType;
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.SchemaDefinition;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.service.output.ServiceOutputTarget;
-import org.finos.legend.engine.testable.persistence.exception.PersistenceException;
 import org.finos.legend.engine.testable.persistence.mapper.FieldTypeMapper;
 import org.finos.legend.pure.generated.Root_meta_pure_persistence_metamodel_Persistence;
 import org.finos.legend.pure.generated.Root_meta_pure_persistence_metamodel_service_ServiceOutputTarget;
 import org.finos.legend.pure.generated.Root_meta_pure_persistence_metamodel_target_PersistenceTarget;
 import org.finos.legend.pure.generated.Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget;
 import org.finos.legend.pure.m3.coreinstance.meta.relational.metamodel.Column;
-import org.finos.legend.pure.m3.coreinstance.meta.relational.metamodel.Database;
-import org.finos.legend.pure.m3.coreinstance.meta.relational.metamodel.SchemaAccessor;
 import org.finos.legend.pure.m3.coreinstance.meta.relational.metamodel.relation.Table;
 
 import static org.finos.legend.pure.generated.platform_store_relational_functions.Root_meta_relational_metamodel_datatype_dataTypeToSqlText_DataType_1__String_1_;
@@ -44,16 +41,8 @@ public class DatasetMapper
     public static Dataset getTargetDatasetV2(Root_meta_pure_persistence_metamodel_Persistence persistence) throws Exception
     {
         Root_meta_pure_persistence_metamodel_service_ServiceOutputTarget serviceOutputTarget = getTdsServiceOutput(persistence);
-        Database database = getDatabase(serviceOutputTarget);
-        String tableName = getTargetTableName(serviceOutputTarget);
+        Table table = getTargetTable(serviceOutputTarget);
 
-        // Find the table
-        RichIterable<? extends Table> tables = database._schemas().flatCollect(SchemaAccessor::_tables);
-        Table table = tables.detect(t -> t._name().equals(tableName));
-        if (table == null)
-        {
-            throw new PersistenceException(String.format("Target table [%s] not found in Persistence Spec", tableName));
-        }
         String schemaName = table._schema()._name();
         if (schemaName.equals(DEFAULT_SCHEMA))
         {
@@ -62,9 +51,9 @@ public class DatasetMapper
         SchemaDefinition schemaDefinition = getSchemaDefinition(table);
 
         DatasetDefinition datasetDefinition = DatasetDefinition.builder()
-                .name(tableName)
+                .name(table._name())
                 .group(schemaName)
-                .alias(tableName)
+                .alias(table._name())
                 .schema(schemaDefinition)
                 .build();
 
@@ -76,7 +65,7 @@ public class DatasetMapper
         return IngestModeMapper.deriveDatasets(serviceOutputTarget, mainDataset, testData);
     }
 
-    private static Database getDatabase(Root_meta_pure_persistence_metamodel_service_ServiceOutputTarget serviceOutputTarget)
+    private static Table getTargetTable(Root_meta_pure_persistence_metamodel_service_ServiceOutputTarget serviceOutputTarget)
     {
         Root_meta_pure_persistence_metamodel_target_PersistenceTarget target = serviceOutputTarget._target();
         if (!(target instanceof Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget))
@@ -84,20 +73,7 @@ public class DatasetMapper
             throw new UnsupportedOperationException("write-component-test only supports RelationalSink");
         }
         Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget relationalSink = (Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget) target;
-        Database database = relationalSink._database();
-        return database;
-    }
-
-    private static String getTargetTableName(Root_meta_pure_persistence_metamodel_service_ServiceOutputTarget serviceOutputTarget)
-    {
-        Root_meta_pure_persistence_metamodel_target_PersistenceTarget target = serviceOutputTarget._target();
-        if (!(target instanceof Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget))
-        {
-            throw new UnsupportedOperationException("write-component-test only supports RelationalSink");
-        }
-        Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget relationalSink = (Root_meta_pure_persistence_relational_metamodel_RelationalPersistenceTarget) target;
-        Table table = relationalSink._table();
-        return table._name();
+        return relationalSink._table();
     }
 
     private static SchemaDefinition getSchemaDefinition(Table table) throws Exception

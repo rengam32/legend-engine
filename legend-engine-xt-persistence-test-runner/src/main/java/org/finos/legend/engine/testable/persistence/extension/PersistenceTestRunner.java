@@ -40,6 +40,7 @@ import org.finos.legend.engine.protocol.pure.v1.model.test.result.TestExecuted;
 import org.finos.legend.engine.protocol.pure.v1.model.test.result.TestResult;
 import org.finos.legend.engine.testable.extension.TestRunner;
 import org.finos.legend.engine.testable.persistence.assertion.PersistenceTestAssertionEvaluator;
+import org.finos.legend.engine.testable.persistence.exception.PersistenceException;
 import org.finos.legend.engine.testable.persistence.mapper.v1.DatasetMapper;
 import org.finos.legend.engine.testable.persistence.mapper.v1.IngestModeMapper;
 import org.finos.legend.pure.generated.Root_meta_pure_persistence_metamodel_Persistence;
@@ -85,6 +86,7 @@ public class PersistenceTestRunner implements TestRunner
 
         try
         {
+            validatePersistenceSpec(persistence);
             List<AssertionStatus> assertStatuses = new ArrayList<>();
             Dataset targetDataset;
             Set<String> fieldsToIgnore;
@@ -103,7 +105,7 @@ public class PersistenceTestRunner implements TestRunner
             {
                 targetDataset = org.finos.legend.engine.testable.persistence.mapper.v2.DatasetMapper.getTargetDatasetV2(purePersistence);
                 serviceOutputTarget = org.finos.legend.engine.testable.persistence.mapper.v2.IngestModeMapper.getServiceOutputTarget(persistence);
-                fieldsToIgnore = org.finos.legend.engine.testable.persistence.mapper.v2.IngestModeMapper.getFieldsToIgnore(serviceOutputTarget);
+                fieldsToIgnore = org.finos.legend.engine.testable.persistence.mapper.v2.IngestModeMapper.getFieldsToIgnoreForComparison(serviceOutputTarget);
                 isTransactionMilestoningTimeBased = org.finos.legend.engine.testable.persistence.mapper.v2.IngestModeMapper.isTransactionMilestoningTimeBased(serviceOutputTarget);
 
             }
@@ -127,7 +129,7 @@ public class PersistenceTestRunner implements TestRunner
                         String testDataString = getConnectionTestData(testBatch.testData);
 
                         // Test runner flow for v2
-                        if (!isPersistenceSpecModelV1 && serviceOutputTarget != null)
+                        if (!isPersistenceSpecModelV1)
                         {
                             invokePersistence(targetDataset, serviceOutputTarget, testDataString, connection);
                         }
@@ -164,6 +166,15 @@ public class PersistenceTestRunner implements TestRunner
             persistenceTestH2Connection.closeConnection();
         }
         return result;
+    }
+
+    private void validatePersistenceSpec(Persistence persistence) throws PersistenceException
+    {
+        if ((persistence.persister != null && persistence.serviceOutputTargets != null && persistence.serviceOutputTargets.size() > 0)
+                || (persistence.persister == null && persistence.serviceOutputTargets == null))
+        {
+            throw new PersistenceException("Persistence spec should contain either persister or serviceOutputTarget blocks ");
+        }
     }
 
     private IngestorResult invokePersistence(Dataset targetDataset, Persistence persistence, String testData,

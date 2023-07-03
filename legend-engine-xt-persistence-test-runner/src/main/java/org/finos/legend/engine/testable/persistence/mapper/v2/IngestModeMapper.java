@@ -59,6 +59,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.finos.legend.engine.testable.persistence.mapper.v2.DatasetMapper.STAGING_SUFFIX;
+import static org.finos.legend.engine.testable.persistence.mapper.v2.DatasetMapper.isFieldNamePresent;
 
 public class IngestModeMapper
 {
@@ -169,7 +170,7 @@ public class IngestModeMapper
                 if (datasetType instanceof Snapshot)
                 {
                     ignoreAuditField(fieldsToIgnore, nontemporal);
-                        //todo (rengam) : fix index logic
+                        //todo: fix index logic
                     //    filteredStagingIndices = baseSchema.indexes().stream().filter(index -> !fieldsToIgnore.contains(index.indexName())).collect(Collectors.toList());
                     Dataset stagingDataset = getStagingDataset(baseSchema, stagingDatasetBuilder, fieldsToIgnore, fieldsToAdd);
 
@@ -263,7 +264,7 @@ public class IngestModeMapper
         }
     }
 
-    public static Set<String> getFieldsToIgnore(ServiceOutputTarget serviceOutputTarget) throws Exception
+    public static Set<String> getFieldsToIgnoreForComparison(ServiceOutputTarget serviceOutputTarget) throws Exception
     {
         return extractFieldsToExclude(serviceOutputTarget.serviceOutput.datasetType, getTemporality(serviceOutputTarget));
     }
@@ -397,19 +398,19 @@ public class IngestModeMapper
         @Override
         public Set<String> visitBatchId(BatchId val)
         {
-            return new HashSet();
+            return new HashSet<>();
         }
 
         @Override
         public Set<String> visitDateTime(ProcessingDateTime val)
         {
-            return new HashSet(Arrays.asList(val.timeIn, val.timeOut));
+            return new HashSet<>(Arrays.asList(val.timeIn, val.timeOut));
         }
 
         @Override
         public Set<String> visitBatchIdAndDateTime(BatchIdAndDateTime val)
         {
-            return new HashSet(Arrays.asList(val.timeIn, val.timeOut));
+            return new HashSet<>(Arrays.asList(val.timeIn, val.timeOut));
         }
     };
 
@@ -449,10 +450,5 @@ public class IngestModeMapper
             return Optional.empty();
         }
     };
-
-    static boolean isFieldNamePresent(SchemaDefinition schema, String fieldName)
-    {
-        return schema.fields().stream().anyMatch(field -> field.name().equals(fieldName));
-    }
 
 }

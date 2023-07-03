@@ -16,6 +16,7 @@ package org.finos.legend.engine.testable.persistence.mapper;
 
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.DatasetType;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.Delta;
+import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.dataset.actionindicator.NoActionIndicator;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.persister.ingestmode.delta.BitemporalDelta;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.persistence.relational.temporality.Bitemporal;
 import org.finos.legend.engine.testable.persistence.mapper.v1.MappingVisitors;
@@ -36,7 +37,10 @@ public class BitemporalDeltaMapper
 
     public static org.finos.legend.engine.persistence.components.ingestmode.BitemporalDelta from(Bitemporal temporality, DatasetType datasetType)
     {
-
+        if (((Delta) datasetType).actionIndicator == null)
+        {
+            ((Delta) datasetType).actionIndicator = new NoActionIndicator();
+        }
         return org.finos.legend.engine.persistence.components.ingestmode.BitemporalDelta.builder()
                 .digestField(DIGEST_FIELD_DEFAULT)
                 .mergeStrategy(((Delta)datasetType).actionIndicator.accept(org.finos.legend.engine.testable.persistence.mapper.v2.MappingVisitors.MAP_TO_COMPONENT_DELETE_STRATEGY))
