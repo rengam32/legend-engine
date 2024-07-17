@@ -319,11 +319,11 @@ public final class DEPRECATED_PureGrammarComposerCore implements
         builder.append("Profile ").append(PureGrammarComposerUtility.convertPath(profile.getPath())).append("\n").append("{\n");
         if (profile.stereotypes != null && !profile.stereotypes.isEmpty())
         {
-            builder.append(getTabString()).append("stereotypes: [").append(Lists.mutable.withAll(profile.stereotypes).collect(PureGrammarComposerUtility::convertIdentifier).makeString(", ")).append("];\n");
+            builder.append(getTabString()).append("stereotypes: [").append(Lists.mutable.withAll(profile.stereotypes).collect(profileStereoType -> PureGrammarComposerUtility.convertIdentifier(profileStereoType.value)).makeString(", ")).append("];\n");
         }
         if (profile.tags != null && !profile.tags.isEmpty())
         {
-            builder.append(getTabString()).append("tags: [").append(Lists.mutable.withAll(profile.tags).collect(PureGrammarComposerUtility::convertIdentifier).makeString(", ")).append("];\n");
+            builder.append(getTabString()).append("tags: [").append(Lists.mutable.withAll(profile.tags).collect(profileTag -> PureGrammarComposerUtility.convertIdentifier(profileTag.value)).makeString(", ")).append("];\n");
         }
         return builder.append("}").toString();
     }
@@ -362,7 +362,7 @@ public final class DEPRECATED_PureGrammarComposerCore implements
         builder.append("Class ").append(HelperDomainGrammarComposer.renderAnnotations(_class.stereotypes, _class.taggedValues)).append(PureGrammarComposerUtility.convertPath(_class.getPath()));
         if (!_class.superTypes.isEmpty())
         {
-            builder.append(" extends ").append(Lists.mutable.withAll(_class.superTypes).makeString(", "));
+            builder.append(" extends ").append(_class.superTypes.stream().map(x -> x.path).collect(Collectors.joining(", ")));
         }
         builder.append("\n");
         if (!_class.constraints.isEmpty())

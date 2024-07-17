@@ -43,8 +43,13 @@ public class SnowflakeAppGenerator
 
     public static SnowflakeAppArtifact generateArtifact(PureModel pureModel, Root_meta_external_function_activator_snowflakeApp_SnowflakeApp activator, PureModelContext inputModel, Function<PureModel, RichIterable<? extends Root_meta_pure_extension_Extension>> routerExtensions)
     {
-        String sqlFunctionExpression = core_snowflakeapp_generation_generation.Root_meta_external_function_activator_snowflakeApp_generation_generateArtifact_SnowflakeApp_1__Extension_MANY__String_1_(activator, routerExtensions.apply(pureModel), pureModel.getExecutionSupport());
+        return generateArtifact(pureModel, activator, inputModel, false, routerExtensions);
+    }
 
+    public static SnowflakeAppArtifact generateArtifact(PureModel pureModel, Root_meta_external_function_activator_snowflakeApp_SnowflakeApp activator, PureModelContext inputModel, boolean createStatementOnly, Function<PureModel, RichIterable<? extends Root_meta_pure_extension_Extension>> routerExtensions)
+    {
+        String sqlFunctionExpression = core_snowflakeapp_generation_generation.Root_meta_external_function_activator_snowflakeApp_generation_generateArtifact_SnowflakeApp_1__Extension_MANY__String_1_(activator, routerExtensions.apply(pureModel), pureModel.getExecutionSupport());
+        String inputParamStub = core_snowflakeapp_generation_generation.Root_meta_external_function_activator_snowflakeApp_generation_generateInputParamsStub_Function_1__Boolean_1__String_1_(activator._function(), false, pureModel.getExecutionSupport());
         RelationalDatabaseConnection connection;
         AlloySDLC sdlc = null;
         if (((PureModelContextData)inputModel).getOrigin() != null)
@@ -60,16 +65,30 @@ public class SnowflakeAppGenerator
         {
             //identify connection
             SnowflakeApp protocolActivator = Lists.mutable.withAll(((PureModelContextData) inputModel).getElementsOfType(SnowflakeApp.class))
-                    .select(c -> c.getPath().equals(platform_pure_basics_meta_elementToPath.Root_meta_pure_functions_meta_elementToPath_PackageableElement_1__String_1_(activator, pureModel.getExecutionSupport())))
+                    .select(c -> c.getPath().equals(platform_pure_essential_meta_graph_elementToPath.Root_meta_pure_functions_meta_elementToPath_PackageableElement_1__String_1_(activator, pureModel.getExecutionSupport())))
                     .getFirst();
             connection   = (RelationalDatabaseConnection) Lists.mutable.withAll(((PureModelContextData) inputModel).getElementsOfType(PackageableConnection.class))
                     .select(c -> c.getPath().equals(((org.finos.legend.engine.protocol.snowflakeApp.metamodel.SnowflakeAppDeploymentConfiguration)protocolActivator.activationConfiguration).activationConnection.connection)).getFirst().connectionValue;
             SnowflakeDatasourceSpecification ds = (SnowflakeDatasourceSpecification)connection.datasourceSpecification;
             String deployedLocation = String.format("https://app.%s.privatelink.snowflakecomputing.com/%s/%s/data/databases/%S", ds.region, ds.region, ds.accountName, ds.databaseName);
+            if (!createStatementOnly)
+            {
+                String generatedGrantStatement = generateGrantStatement(activator._applicationName(), inputParamStub);
+                content.addGrantStatement(generatedGrantStatement);
+            }
             return new SnowflakeAppArtifact(content, new SnowflakeAppDeploymentConfiguration(connection), deployedLocation, sdlc);
         }
-
         return new SnowflakeAppArtifact(content, sdlc);
+    }
+
+    public static String generateFunctionLineage(PureModel pureModel, Root_meta_external_function_activator_snowflakeApp_SnowflakeApp activator, PureModelContext inputModel, Function<PureModel, RichIterable<? extends Root_meta_pure_extension_Extension>> routerExtensions)
+    {
+        return core_snowflakeapp_generation_generation.Root_meta_external_function_activator_snowflakeApp_generation_computeLineage_SnowflakeApp_1__Extension_MANY__String_1_(activator, routerExtensions.apply(pureModel), pureModel.getExecutionSupport());
+    }
+
+    public static String generateGrantStatement(String appName, String inputStub)
+    {
+        return String.format("%S%S to role PUBLIC;", appName, inputStub);
     }
 
     private static RichIterable<String> extractSQLExpressions(Root_meta_pure_executionPlan_ExecutionPlan executionPlan)

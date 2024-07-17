@@ -27,21 +27,25 @@ import org.finos.legend.engine.protocol.pure.v1.model.context.PureModelContextPo
 import org.finos.legend.engine.shared.core.ObjectMapperFactory;
 import org.finos.legend.engine.shared.core.api.result.ManageConstantResult;
 import org.finos.legend.engine.shared.core.identity.Identity;
-import org.finos.legend.engine.shared.core.identity.factory.IdentityFactoryProvider;
 import org.finos.legend.engine.shared.core.kerberos.ProfileManagerHelper;
 import org.finos.legend.engine.shared.core.operational.errorManagement.ExceptionTool;
 import org.finos.legend.engine.shared.core.operational.http.InflateInterceptor;
 import org.finos.legend.engine.shared.core.operational.logs.LogInfo;
 import org.finos.legend.engine.shared.core.operational.logs.LoggingEventType;
+import org.finos.legend.engine.shared.core.operational.prometheus.MetricsHandler;
+import org.finos.legend.engine.shared.core.operational.prometheus.Prometheus;
 import org.finos.legend.engine.testable.TestableRunner;
+import org.finos.legend.engine.testable.model.DebugTestsResult;
 import org.finos.legend.engine.testable.model.RunTestsInput;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.finos.legend.engine.testable.model.RunTestsResult;
 import org.pac4j.core.profile.CommonProfile;
@@ -74,15 +78,42 @@ public class TestableApi
     @Path("runTests")
     @ApiOperation(value = "Run tests on testables")
     @Consumes({MediaType.APPLICATION_JSON, InflateInterceptor.APPLICATION_ZLIB})
-    public Response doTests(RunTestsInput input, @ApiParam(hidden = true) @Pac4JProfileManager ProfileManager<CommonProfile> profileManager)
+    @Prometheus(name = "run tests", doc = "Test run duration summary")
+    public Response doTests(RunTestsInput input, @ApiParam(hidden = true) @Pac4JProfileManager ProfileManager<CommonProfile> profileManager, @Context UriInfo uriInfo)
     {
         MutableList<CommonProfile> profiles = ProfileManagerHelper.extractProfiles(profileManager);
-        Identity identity = IdentityFactoryProvider.getInstance().makeIdentity(profiles);
+        Identity identity = Identity.makeIdentity(profiles);
+        long start = System.currentTimeMillis();
         try
         {
             LOGGER.info(new LogInfo(identity.getName(), LoggingEventType.TESTABLE_DO_TESTS_START, "").toString());
             Pair<PureModelContextData, PureModel> modelAndData = this.modelManager.loadModelAndData(input.model, input.model instanceof PureModelContextPointer ? ((PureModelContextPointer) input.model).serializer.version : null, identity, null);
             RunTestsResult runTestsResult = testableRunner.doTests(input.testables, modelAndData.getTwo(), modelAndData.getOne());
+            LOGGER.info(new LogInfo(identity.getName(), LoggingEventType.TESTABLE_DO_TESTS_STOP, "").toString());
+            long end = System.currentTimeMillis();
+            MetricsHandler.observeRequest(uriInfo != null ? uriInfo.getPath() : null, start, end);
+            return ManageConstantResult.manageResult(identity.getName(), runTestsResult, objectMapper);
+        }
+        catch (Exception e)
+        {
+            MetricsHandler.observeError(LoggingEventType.RUN_TEST_ERROR, e, null);
+            return ExceptionTool.exceptionManager(e, LoggingEventType.TESTABLE_DO_TESTS_ERROR, identity.getName());
+        }
+    }
+
+    @POST
+    @Path("debugTests")
+    @ApiOperation(value = "Debug testables")
+    @Consumes({MediaType.APPLICATION_JSON, InflateInterceptor.APPLICATION_ZLIB})
+    public Response debugTests(RunTestsInput input, @ApiParam(hidden = true) @Pac4JProfileManager ProfileManager<CommonProfile> profileManager)
+    {
+        MutableList<CommonProfile> profiles = ProfileManagerHelper.extractProfiles(profileManager);
+        Identity identity = Identity.makeIdentity(profiles);
+        try
+        {
+            LOGGER.info(new LogInfo(identity.getName(), LoggingEventType.TESTABLE_DO_TESTS_START, "").toString());
+            Pair<PureModelContextData, PureModel> modelAndData = this.modelManager.loadModelAndData(input.model, input.model instanceof PureModelContextPointer ? ((PureModelContextPointer) input.model).serializer.version : null, identity, null);
+            DebugTestsResult runTestsResult = testableRunner.debugTests(input.testables, modelAndData.getTwo(), modelAndData.getOne());
             LOGGER.info(new LogInfo(identity.getName(), LoggingEventType.TESTABLE_DO_TESTS_STOP, "").toString());
             return ManageConstantResult.manageResult(identity.getName(), runTestsResult, objectMapper);
         }

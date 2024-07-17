@@ -54,6 +54,7 @@ import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.store.r
 import java.util.Collections;
 import java.util.List;
 
+import static org.finos.legend.engine.language.pure.grammar.to.HelperDomainGrammarComposer.renderAnnotations;
 import static org.finos.legend.engine.language.pure.grammar.to.PureGrammarComposer.buildSectionComposer;
 import static org.finos.legend.engine.language.pure.grammar.to.PureGrammarComposerUtility.*;
 
@@ -182,7 +183,7 @@ public class RelationalGrammarComposerExtension implements IRelationalGrammarCom
                 RelationalGrammarComposerContext ctx = RelationalGrammarComposerContext.Builder.newInstance(context).build();
                 RelationalAssociationMapping relationalAssociationMapping = (RelationalAssociationMapping) associationMapping;
                 StringBuilder associationMappingBuilder = new StringBuilder();
-                associationMappingBuilder.append(relationalAssociationMapping.association).append(": ").append("Relational\n");
+                associationMappingBuilder.append(relationalAssociationMapping.association.path).append(": ").append("Relational\n");
                 associationMappingBuilder.append(PureGrammarComposerUtility.getTabString()).append("{\n");
                 associationMappingBuilder.append(getTabString(2)).append("AssociationMapping").append("\n");
                 associationMappingBuilder.append(PureGrammarComposerUtility.getTabString(2)).append("(").append("\n");
@@ -259,11 +260,11 @@ public class RelationalGrammarComposerExtension implements IRelationalGrammarCom
         Schema defaultSchema = ListIterate.select(database.schemas, schema -> "default".equals(schema.name)).getFirst();
         RelationalGrammarComposerContext context = RelationalGrammarComposerContext.Builder.newInstance().withCurrentDatabase(PureGrammarComposerUtility.convertPath(database.getPath())).withNoDynaFunctionNames().withRenderStyle(PUREcontext.getRenderStyle()).build();
         StringBuilder builder = new StringBuilder();
-        builder.append("Database ").append(PureGrammarComposerUtility.convertPath(database.getPath())).append("\n(\n");
+        builder.append("Database ").append(renderAnnotations(database.stereotypes, null)).append(PureGrammarComposerUtility.convertPath(database.getPath())).append("\n(\n");
         boolean nonEmpty = false;
         if (!database.includedStores.isEmpty())
         {
-            builder.append(LazyIterate.collect(database.includedStores, include -> getTabString(1) + "include " + PureGrammarComposerUtility.convertPath(include)).makeString("\n"));
+            builder.append(LazyIterate.collect(database.includedStores, include -> getTabString(1) + "include " + PureGrammarComposerUtility.convertPath(include.path)).makeString("\n"));
             builder.append("\n");
             nonEmpty = true;
         }

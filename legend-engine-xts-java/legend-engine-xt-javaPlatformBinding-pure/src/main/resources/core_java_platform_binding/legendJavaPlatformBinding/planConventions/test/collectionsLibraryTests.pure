@@ -275,9 +275,9 @@ function <<meta::pure::profiles::test.Test, meta::pure::profiles::test.AlloyOnly
 meta::pure::executionPlan::platformBinding::legendJava::library::collection::tests::testCollectionsPureTests() : Boolean[1]
 {
    javaPureTests(engineConventions([]), [
-      meta::pure::functions::collection::tests::removeDuplicates::testRemoveDuplicatesPrimitiveNonStandardFunction__Boolean_1_,
-      meta::pure::functions::collection::tests::removeDuplicates::testRemoveDuplicatesEmptyList__Boolean_1_,
-      meta::pure::functions::collection::tests::removeDuplicates::testRemoveDuplicatesByPrimitive__Boolean_1_
+      //meta::pure::functions::collection::tests::removeDuplicates::testRemoveDuplicatesPrimitiveNonStandardFunction__Boolean_1_,
+      //meta::pure::functions::collection::tests::removeDuplicates::testRemoveDuplicatesEmptyList__Boolean_1_,
+      //meta::pure::functions::collection::tests::removeDuplicates::testRemoveDuplicatesByPrimitive__Boolean_1_
    ])
       ->generate(GeographicEntityType)
       ->addTestsWithin(meta::pure::functions::collection::tests::init)
@@ -287,11 +287,11 @@ meta::pure::executionPlan::platformBinding::legendJava::library::collection::tes
       ->addTestsWithin(meta::pure::functions::collection::tests::sort)
       ->addTestsWithin(meta::pure::functions::collection::tests::indexof)
       ->addTestsWithin(meta::pure::functions::collection::tests::range)   
-         ->excludeTest(meta::pure::functions::collection::tests::sort::testSimpleSortWithFunctionVariables__Boolean_1_) // uses a lambda variable
+//         ->excludeTest(meta::pure::functions::collection::tests::sort::testSimpleSortWithFunctionVariables__Boolean_1_) // uses a lambda variable
          ->excludeTest(meta::pure::functions::collection::tests::sort::testSortBy__Boolean_1_) // new
       ->addTestsWithin(meta::pure::functions::collection::tests::fold)
-         ->excludeTest(meta::pure::functions::collection::tests::fold::testFold__Boolean_1_) // new
-         ->excludeTest(meta::pure::functions::collection::tests::fold::testFoldToMany__Boolean_1_) // new
-         ->excludeTest(meta::pure::functions::collection::tests::fold::testFoldFiltering__Boolean_1_) // new
+//         ->excludeTest(meta::pure::functions::collection::tests::fold::testFold__Boolean_1_) // new
+//         ->excludeTest(meta::pure::functions::collection::tests::fold::testFoldToMany__Boolean_1_) // new
+//         ->excludeTest(meta::pure::functions::collection::tests::fold::testFoldFiltering__Boolean_1_) // new
       ->runTests();
 }

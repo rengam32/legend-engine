@@ -117,6 +117,24 @@ public class ApiUtils
         return datasetReference;
     }
 
+    public static LockInfoDataset applyCase(LockInfoDataset lockInfoDataset, CaseConversion caseConversion)
+    {
+        Function<String, String> strategy;
+        if (caseConversion == CaseConversion.TO_UPPER)
+        {
+            strategy = String::toUpperCase;
+        }
+        else if (caseConversion == CaseConversion.TO_LOWER)
+        {
+            strategy = String::toLowerCase;
+        }
+        else
+        {
+            return lockInfoDataset;
+        }
+        return new DatasetCaseConverter().applyCaseOnLockInfoDataset(lockInfoDataset, strategy);
+    }
+
     public static SchemaDefinition applyCase(SchemaDefinition schema, CaseConversion caseConversion)
     {
         DatasetCaseConverter converter = new DatasetCaseConverter();
@@ -211,7 +229,7 @@ public class ApiUtils
                 .findFirst()
                 .map(TabularData::getData)
                 .flatMap(t -> t.stream().findFirst())
-                .map(stringObjectMap -> (String) stringObjectMap.get(metadataDataset.batchSourceInfoField()));
+                .map(stringObjectMap -> String.valueOf(stringObjectMap.get(metadataDataset.batchSourceInfoField())));
 
         // Convert map of Filters to List of Filters
         if (stagingFilters.isPresent())

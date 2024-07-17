@@ -67,9 +67,40 @@ public class SchemaEvolutionForMetadataDatestTest extends BaseTest
 
         // Perform Schema Evolution
         List<String> schemaEvolutionSql = performSchemaEvolutionOfMetadataDataset(datasets, ingestor);
-        String expectedSql = "ALTER TABLE batch_metadata ADD COLUMN \"batch_source_info\" JSON";
-        Assertions.assertEquals(1, schemaEvolutionSql.size());
-        Assertions.assertEquals(expectedSql, schemaEvolutionSql.get(0));
+        String expectedSql1 = "ALTER TABLE batch_metadata ADD COLUMN \"ingest_request_id\" VARCHAR(64)";
+        String expectedSql2 = "ALTER TABLE batch_metadata ADD COLUMN \"batch_source_info\" JSON";
+        String expectedSql3 = "ALTER TABLE batch_metadata ADD COLUMN \"batch_statistics\" JSON";
+        Assertions.assertEquals(3, schemaEvolutionSql.size());
+        Assertions.assertEquals(expectedSql1, schemaEvolutionSql.get(0));
+        Assertions.assertEquals(expectedSql2, schemaEvolutionSql.get(1));
+        Assertions.assertEquals(expectedSql3, schemaEvolutionSql.get(2));
+
+        // Perform Schema Evolution again - nothing should happen now
+        schemaEvolutionSql = performSchemaEvolutionOfMetadataDataset(datasets, ingestor);
+        Assertions.assertTrue(schemaEvolutionSql.isEmpty());
+    }
+
+    @Test
+    void testSchemaEvolutionBatchSourceInfoMissingIgnoreCase() throws Exception
+    {
+        DatasetDefinition mainTable = TestUtils.getDefaultMainTable();
+        DatasetDefinition stagingTable = TestUtils.getBasicStagingTable();
+        Datasets datasets = Datasets.of(mainTable, stagingTable);
+        RelationalIngestor ingestor = getRelationalIngestor(CaseConversion.NONE);
+
+        // Pre create metadata table
+        DatasetDefinition meta = getMetadataDatasetDefInUpperCaseWithoutBatchSourceInfo(MetadataDataset.builder().build());
+        createTempTable(meta);
+
+        // Perform Schema Evolution
+        List<String> schemaEvolutionSql = performSchemaEvolutionOfMetadataDataset(datasets, ingestor);
+        String expectedSql1 = "ALTER TABLE batch_metadata ADD COLUMN \"ingest_request_id\" VARCHAR(64)";
+        String expectedSql2 = "ALTER TABLE batch_metadata ADD COLUMN \"batch_source_info\" JSON";
+        String expectedSql3 = "ALTER TABLE batch_metadata ADD COLUMN \"batch_statistics\" JSON";
+        Assertions.assertEquals(3, schemaEvolutionSql.size());
+        Assertions.assertEquals(expectedSql1, schemaEvolutionSql.get(0));
+        Assertions.assertEquals(expectedSql2, schemaEvolutionSql.get(1));
+        Assertions.assertEquals(expectedSql3, schemaEvolutionSql.get(2));
 
         // Perform Schema Evolution again - nothing should happen now
         schemaEvolutionSql = performSchemaEvolutionOfMetadataDataset(datasets, ingestor);
@@ -91,11 +122,15 @@ public class SchemaEvolutionForMetadataDatestTest extends BaseTest
 
         // Perform Schema Evolution
         List<String> schemaEvolutionSql = performSchemaEvolutionOfMetadataDataset(datasets, ingestor);
-        String expectedSql1 = "ALTER TABLE BATCH_METADATA ADD COLUMN \"BATCH_SOURCE_INFO\" JSON";
-        String expectedSql2 = "ALTER TABLE BATCH_METADATA ADD COLUMN \"ADDITIONAL_METADATA\" JSON";
-        Assertions.assertEquals(2, schemaEvolutionSql.size());
+        String expectedSql1 = "ALTER TABLE BATCH_METADATA ADD COLUMN \"INGEST_REQUEST_ID\" VARCHAR(64)";
+        String expectedSql2 = "ALTER TABLE BATCH_METADATA ADD COLUMN \"BATCH_SOURCE_INFO\" JSON";
+        String expectedSql3 = "ALTER TABLE BATCH_METADATA ADD COLUMN \"ADDITIONAL_METADATA\" JSON";
+        String expectedSql4 = "ALTER TABLE BATCH_METADATA ADD COLUMN \"BATCH_STATISTICS\" JSON";
+        Assertions.assertEquals(4, schemaEvolutionSql.size());
         Assertions.assertEquals(expectedSql1, schemaEvolutionSql.get(0));
         Assertions.assertEquals(expectedSql2, schemaEvolutionSql.get(1));
+        Assertions.assertEquals(expectedSql3, schemaEvolutionSql.get(2));
+        Assertions.assertEquals(expectedSql4, schemaEvolutionSql.get(3));
 
         // Perform Schema Evolution again - nothing should happen now
         schemaEvolutionSql = performSchemaEvolutionOfMetadataDataset(datasets, ingestor);
@@ -139,6 +174,23 @@ public class SchemaEvolutionForMetadataDatestTest extends BaseTest
                         .addFields(Field.builder().name(metadataDataset.additionalMetadataField()).type(FieldType.of(DataType.JSON, Optional.empty(), Optional.empty())).build())
                         .build())
                 .build();
+    }
+
+    private DatasetDefinition getMetadataDatasetDefInUpperCaseWithoutBatchSourceInfo(MetadataDataset metadataDataset)
+    {
+        return DatasetDefinition.builder()
+            .database(metadataDataset.metadataDatasetDatabaseName())
+            .group(metadataDataset.metadataDatasetGroupName())
+            .name(metadataDataset.metadataDatasetName())
+            .schema(SchemaDefinition.builder()
+                .addFields(Field.builder().name(metadataDataset.tableNameField().toUpperCase()).type(FieldType.of(DataType.VARCHAR, 255, null)).build())
+                .addFields(Field.builder().name(metadataDataset.batchStartTimeField().toUpperCase()).type(FieldType.of(DataType.DATETIME, Optional.empty(), Optional.empty())).build())
+                .addFields(Field.builder().name(metadataDataset.batchEndTimeField().toUpperCase()).type(FieldType.of(DataType.DATETIME, Optional.empty(), Optional.empty())).build())
+                .addFields(Field.builder().name(metadataDataset.batchStatusField().toUpperCase()).type(FieldType.of(DataType.VARCHAR, 32, null)).build())
+                .addFields(Field.builder().name(metadataDataset.tableBatchIdField().toUpperCase()).type(FieldType.of(DataType.INT, Optional.empty(), Optional.empty())).build())
+                .addFields(Field.builder().name(metadataDataset.additionalMetadataField().toUpperCase()).type(FieldType.of(DataType.JSON, Optional.empty(), Optional.empty())).build())
+                .build())
+            .build();
     }
 
     private DatasetDefinition getMetadataDatasetDefWithoutBatchSourceInfoAndAdditionalMetadata(MetadataDataset metadataDataset)

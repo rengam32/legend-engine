@@ -28,6 +28,7 @@ import org.eclipse.collections.impl.utility.ListIterate;
 import org.finos.legend.engine.language.pure.compiler.toPureGraph.handlers.Handlers;
 import org.finos.legend.engine.language.pure.compiler.toPureGraph.test.TestBuilderHelper;
 import org.finos.legend.engine.protocol.pure.v1.model.context.EngineErrorType;
+import org.finos.legend.engine.protocol.pure.v1.model.context.PackageableElementPointer;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.domain.Multiplicity;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.mapping.AssociationMapping;
 import org.finos.legend.engine.protocol.pure.v1.model.packageableElement.mapping.ClassMapping;
@@ -103,7 +104,7 @@ import java.util.stream.Collectors;
 
 import static org.finos.legend.engine.language.pure.compiler.toPureGraph.HelperModelBuilder.getElementFullPath;
 import static org.finos.legend.pure.generated.platform_dsl_mapping_functions_Mapping.Root_meta_pure_mapping__allClassMappingsRecursive_Mapping_1__SetImplementation_MANY_;
-import static org.finos.legend.pure.generated.platform_pure_basics_meta_elementToPath.Root_meta_pure_functions_meta_elementToPath_PackageableElement_1__String_1_;
+import static org.finos.legend.pure.generated.platform_pure_essential_meta_graph_elementToPath.Root_meta_pure_functions_meta_elementToPath_PackageableElement_1__String_1_;
 
 public class HelperMappingBuilder
 {
@@ -162,9 +163,9 @@ public class HelperMappingBuilder
                 ._classifierGenericType(new Root_meta_pure_metamodel_type_generics_GenericType_Impl("", null, context.pureModel.getClass("meta::pure::metamodel::type::generics::GenericType"))._rawType(context.pureModel.getType("meta::pure::mapping::EnumerationMapping"))._typeArguments(FastList.newListWith(new Root_meta_pure_metamodel_type_generics_GenericType_Impl("", null, context.pureModel.getClass("meta::pure::metamodel::type::generics::GenericType"))._rawType(context.pureModel.getType("meta::pure::metamodel::type::Any")))))
                 ._name(id)
                 ._parent(pureMapping)
-                ._enumeration(context.resolveEnumeration(em.enumeration, em.sourceInformation))
+                ._enumeration(context.resolveEnumeration(em.enumeration.path, em.enumeration.sourceInformation))
                 ._enumValueMappings(ListIterate.collect(em.enumValueMappings, v -> new Root_meta_pure_mapping_EnumValueMapping_Impl(null, SourceInformationHelper.toM3SourceInformation(v.sourceInformation), null)
-                        ._enum(context.resolveEnumValue(em.enumeration, v.enumValue))
+                        ._enum(context.resolveEnumValue(em.enumeration.path, v.enumValue))
                         ._sourceValues(convertSourceValues(em, v.sourceValues, context))
                 ));
     }
@@ -283,7 +284,7 @@ public class HelperMappingBuilder
 
     public static String getEnumerationMappingId(EnumerationMapping em)
     {
-        return em.id != null ? em.id : em.enumeration.replaceAll("::", "_");
+        return em.id != null ? em.id : em.enumeration.path.replaceAll("::", "_");
     }
 
     public static String getClassMappingId(ClassMapping cm, CompileContext context)
@@ -351,7 +352,7 @@ public class HelperMappingBuilder
         {
             XStoreAssociationMapping xStoreAssociationMapping = (XStoreAssociationMapping) associationMapping;
             XStoreAssociationImplementation base = new Root_meta_pure_mapping_xStore_XStoreAssociationImplementation_Impl("", SourceInformationHelper.toM3SourceInformation(associationMapping.sourceInformation), context.pureModel.getClass("meta::pure::mapping::xStore::XStoreAssociationImplementation"));
-            final org.finos.legend.pure.m3.coreinstance.meta.pure.metamodel.relationship.Association pureAssociation = context.resolveAssociation(xStoreAssociationMapping.association);
+            final org.finos.legend.pure.m3.coreinstance.meta.pure.metamodel.relationship.Association pureAssociation = context.resolveAssociation(xStoreAssociationMapping.association.path, xStoreAssociationMapping.association.sourceInformation);
             MutableList<Store> stores = ListIterate.collect(xStoreAssociationMapping.stores, context::resolveStore);
             base._association(pureAssociation)._stores(stores)._parent(parentMapping)._propertyMappings(ListIterate.collect(xStoreAssociationMapping.propertyMappings, propertyMapping -> propertyMapping.accept(new PropertyMappingBuilder(context, parentMapping, base, HelperMappingBuilder.getAllClassMappings(parentMapping)))));
             return base;
@@ -367,8 +368,9 @@ public class HelperMappingBuilder
     {
         Root_meta_pure_mapping_MappingClass_Impl mappingClass = new Root_meta_pure_mapping_MappingClass_Impl<>(" ", SourceInformationHelper.toM3SourceInformation(mappingclass.sourceInformation), null);
         mappingClass._name(mappingclass.name);
-        MutableList<Generalization> generalizations = ListIterate.collect(mappingclass.superTypes, (superType) ->
+        MutableList<Generalization> generalizations = ListIterate.collect(mappingclass.superTypes, (superTypePtr) ->
         {
+            String superType = superTypePtr.path;
             Generalization generalization = new Root_meta_pure_metamodel_relationship_Generalization_Impl("", null, context.pureModel.getClass("meta::pure::metamodel::relationship::Generalization"))._general(context.resolveGenericType(superType))._specific(mappingClass);
             context.resolveType(superType)._specializationsAdd(generalization);
             return generalization;
@@ -392,7 +394,7 @@ public class HelperMappingBuilder
             Class _class = context.resolveClass(aggregateSetImplementationContainer.setImplementation._class, aggregateSetImplementationContainer.setImplementation.classSourceInformation);
             aggregateSetImplementationContainer.setImplementation.mappingClass = new org.finos.legend.engine.protocol.pure.v1.model.packageableElement.mapping.MappingClass();
             aggregateSetImplementationContainer.setImplementation.mappingClass.name = _class.getName() + "_" + parent.getName() + "_" + aggregateSetImplementationContainer.setImplementation.id;
-            aggregateSetImplementationContainer.setImplementation.mappingClass.superTypes = Lists.mutable.with(getElementFullPath(_class, context.pureModel.getExecutionSupport()));
+            aggregateSetImplementationContainer.setImplementation.mappingClass.superTypes = Lists.mutable.with(new PackageableElementPointer(getElementFullPath(_class, context.pureModel.getExecutionSupport())));
         }
         org.finos.legend.pure.m3.coreinstance.meta.pure.mapping.aggregationAware.AggregateSetImplementationContainer container = new Root_meta_pure_mapping_aggregationAware_AggregateSetImplementationContainer_Impl("", null, context.pureModel.getClass("meta::pure::mapping::aggregationAware::AggregateSetImplementationContainer"));
         container._setImplementation((InstanceSetImplementation) aggregateSetImplementationContainer.setImplementation.accept(new ClassMappingFirstPassBuilder(context, parent)).getOne());
@@ -554,13 +556,13 @@ public class HelperMappingBuilder
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElseThrow(() -> new UnsupportedOperationException("Unsupported data")));
-        if (testData.store.equals("ModelStore"))
+        if (testData.store.path.equals("ModelStore"))
         {
             mappingStoreTestData._store(new Root_meta_external_store_model_ModelStore_Impl(""));
         }
         else
         {
-            mappingStoreTestData._store(context.resolveStore(testData.store));
+            mappingStoreTestData._store(context.resolveStore(testData.store.path, testData.store.sourceInformation));
         }
         return mappingStoreTestData;
     }

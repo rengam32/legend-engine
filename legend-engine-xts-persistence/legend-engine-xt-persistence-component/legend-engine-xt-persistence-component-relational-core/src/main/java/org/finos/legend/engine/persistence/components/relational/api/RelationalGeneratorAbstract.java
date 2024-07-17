@@ -39,6 +39,7 @@ import org.finos.legend.engine.persistence.components.transformer.Transformer;
 import org.finos.legend.engine.persistence.components.util.MetadataUtils;
 import org.finos.legend.engine.persistence.components.util.SchemaEvolutionCapability;
 import org.finos.legend.engine.persistence.components.util.ValidationCategory;
+import org.immutables.value.Value;
 import org.immutables.value.Value.Default;
 import org.immutables.value.Value.Derived;
 import org.immutables.value.Value.Immutable;
@@ -66,7 +67,6 @@ public abstract class RelationalGeneratorAbstract
 {
 
     public static final String BULK_LOAD_BATCH_STATUS_PATTERN = "{BULK_LOAD_BATCH_STATUS_PLACEHOLDER}";
-
     //---------- FLAGS ----------
 
     @Default
@@ -82,6 +82,12 @@ public abstract class RelationalGeneratorAbstract
     }
 
     @Default
+    public boolean writeStatistics()
+    {
+        return false;
+    }
+
+    @Default
     public boolean enableSchemaEvolution()
     {
         return false;
@@ -91,6 +97,12 @@ public abstract class RelationalGeneratorAbstract
     public CaseConversion caseConversion()
     {
         return CaseConversion.NONE;
+    }
+
+    @Default
+    public boolean ignoreCaseForSchemaEvolution()
+    {
+        return false;
     }
 
     @Default
@@ -123,7 +135,7 @@ public abstract class RelationalGeneratorAbstract
 
     public abstract Map<String, Object> additionalMetadata();
 
-    public abstract Optional<String> bulkLoadEventIdValue();
+    public abstract Optional<String> ingestRequestId();
 
     @Default
     public String bulkLoadBatchStatusPattern()
@@ -161,11 +173,12 @@ public abstract class RelationalGeneratorAbstract
         return PlannerOptions.builder()
             .cleanupStagingData(cleanupStagingData())
             .collectStatistics(collectStatistics())
+            .writeStatistics(writeStatistics())
             .enableSchemaEvolution(enableSchemaEvolution())
             .skipMainAndMetadataDatasetCreation(skipMainAndMetadataDatasetCreation())
             .enableConcurrentSafety(enableConcurrentSafety())
             .putAllAdditionalMetadata(additionalMetadata())
-            .bulkLoadEventIdValue(bulkLoadEventIdValue())
+            .ingestRequestId(ingestRequestId())
             .batchSuccessStatusValue(batchSuccessStatusValue())
             .sampleRowCount(sampleRowCount())
             .ingestRunId(ingestRunId())
@@ -186,6 +199,15 @@ public abstract class RelationalGeneratorAbstract
         relationalSink().optimizerForCaseConversion(caseConversion()).ifPresent(builder::addOptimizers);
 
         return builder.build();
+    }
+
+    @Value.Check
+    public void validate()
+    {
+        if (!relationalSink().isIngestModeSupported(ingestMode()))
+        {
+            throw new UnsupportedOperationException("Unsupported ingest mode");
+        }
     }
 
     // ---------- API ----------
@@ -265,7 +287,7 @@ public abstract class RelationalGeneratorAbstract
         if (enableSchemaEvolution())
         {
             // Get logical plan and physical plan for schema evolution and update datasets
-            SchemaEvolution schemaEvolution = new SchemaEvolution(relationalSink(), ingestMode, schemaEvolutionCapabilitySet());
+            SchemaEvolution schemaEvolution = new SchemaEvolution(relationalSink(), ingestMode, schemaEvolutionCapabilitySet(), ignoreCaseForSchemaEvolution());
             SchemaEvolutionResult schemaEvolutionResult = schemaEvolution.buildLogicalPlanForSchemaEvolution(datasets.mainDataset(), datasets.stagingDataset().schema());
             LogicalPlan schemaEvolutionLogicalPlan = schemaEvolutionResult.logicalPlan();
 
