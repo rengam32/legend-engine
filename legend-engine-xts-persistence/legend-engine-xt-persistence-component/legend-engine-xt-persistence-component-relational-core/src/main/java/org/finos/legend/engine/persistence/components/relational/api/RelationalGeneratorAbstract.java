@@ -239,7 +239,8 @@ public abstract class RelationalGeneratorAbstract
     {
         IngestMode ingestModeWithCaseConversion = ApiUtils.applyCase(ingestMode(), caseConversion());
         Datasets datasetsWithCaseConversion = ApiUtils.enrichAndApplyCase(datasets, caseConversion());
-        Dataset enrichedMainDataset = ApiUtils.deriveMainDatasetFromStaging(datasetsWithCaseConversion, ingestModeWithCaseConversion);
+        Dataset enrichedMainDataset = ApiUtils.deriveMainDatasetFromStaging(datasetsWithCaseConversion.mainDataset(),
+                datasetsWithCaseConversion.stagingDataset(), ingestModeWithCaseConversion);
         Datasets enrichedDatasets = datasetsWithCaseConversion.withMainDataset(enrichedMainDataset);
         Planner planner = Planners.get(enrichedDatasets, ingestModeWithCaseConversion, plannerOptions(), relationalSink().capabilities());
         return generateOperations(enrichedDatasets, resources, planner, ingestModeWithCaseConversion);
@@ -263,7 +264,11 @@ public abstract class RelationalGeneratorAbstract
 
         // dry-run pre-actions
         LogicalPlan dryRunPreActionsLogicalPlan = planner.buildLogicalPlanForDryRunPreActions(resources);
-        SqlPlan dryRunPreActionsSqlPlan = transformer.generatePhysicalPlan(dryRunPreActionsLogicalPlan);
+        Optional<SqlPlan> dryRunPreActionsSqlPlan = Optional.empty();
+        if (dryRunPreActionsLogicalPlan != null)
+        {
+            dryRunPreActionsSqlPlan = Optional.of(transformer.generatePhysicalPlan(dryRunPreActionsLogicalPlan));
+        }
 
         // initialize-lock
         LogicalPlan initializeLockLogicalPlan = planner.buildLogicalPlanForInitializeLock(resources);
@@ -319,7 +324,11 @@ public abstract class RelationalGeneratorAbstract
 
         // dry-run
         LogicalPlan dryRunLogicalPlan = planner.buildLogicalPlanForDryRun(resources);
-        SqlPlan dryRunSqlPlan = transformer.generatePhysicalPlan(dryRunLogicalPlan);
+        Optional<SqlPlan> dryRunSqlPlan = Optional.empty();
+        if (dryRunLogicalPlan != null)
+        {
+            dryRunSqlPlan = Optional.of(transformer.generatePhysicalPlan(dryRunLogicalPlan));
+        }
 
         // dry-run validations
         Map<ValidationCategory, List<Pair<Set<FieldValue>, LogicalPlan>>> dryRunValidationLogicalPlan = planner.buildLogicalPlanForDryRunValidation(resources);
@@ -352,7 +361,11 @@ public abstract class RelationalGeneratorAbstract
 
         // dry-run post-cleanup
         LogicalPlan dryRunPostCleanupLogicalPlan = planner.buildLogicalPlanForDryRunPostCleanup(resources);
-        SqlPlan dryRunPostCleanupSqlPlan = transformer.generatePhysicalPlan(dryRunPostCleanupLogicalPlan);
+        Optional<SqlPlan> dryRunPostCleanupSqlPlan = Optional.empty();
+        if (dryRunPostCleanupLogicalPlan != null)
+        {
+            dryRunPostCleanupSqlPlan = Optional.of(transformer.generatePhysicalPlan(dryRunPostCleanupLogicalPlan));
+        }
 
         // post-run statistics
         Map<StatisticName, LogicalPlan> postIngestStatisticsLogicalPlan = planner.buildLogicalPlanForPostRunStatistics(resources);
@@ -380,6 +393,81 @@ public abstract class RelationalGeneratorAbstract
             .putAllDeduplicationAndVersioningErrorChecksSqlPlan(deduplicationAndVersioningErrorChecksSqlPlan)
             .putAllPreIngestStatisticsSqlPlan(preIngestStatisticsSqlPlan)
             .putAllPostIngestStatisticsSqlPlan(postIngestStatisticsSqlPlan)
+            .build();
+    }
+
+    GeneratorResult generateOperationsForCreate(Resources resources, Planner planner)
+    {
+        Transformer<SqlGen, SqlPlan> transformer = new RelationalTransformer(relationalSink(), transformOptions());
+
+        // pre-actions
+        LogicalPlan preActionsLogicalPlan = planner.buildLogicalPlanForPreActions(resources);
+        SqlPlan preActionsSqlPlan = transformer.generatePhysicalPlan(preActionsLogicalPlan);
+
+        return GeneratorResult.builder()
+            .preActionsSqlPlan(preActionsSqlPlan)
+            .ingestSqlPlan(SqlPlan.builder().build())
+            .metadataIngestSqlPlan(SqlPlan.builder().build())
+            .postActionsSqlPlan(SqlPlan.builder().build())
+            .build();
+    }
+
+    GeneratorResult generateOperationsForIngest(Resources resources, Planner planner)
+    {
+        Transformer<SqlGen, SqlPlan> transformer = new RelationalTransformer(relationalSink(), transformOptions());
+
+        // pre-run statistics
+        Map<StatisticName, LogicalPlan> preIngestStatisticsLogicalPlan = planner.buildLogicalPlanForPreRunStatistics(resources);
+        Map<StatisticName, SqlPlan> preIngestStatisticsSqlPlan = new HashMap<>();
+        for (StatisticName statistic : preIngestStatisticsLogicalPlan.keySet())
+        {
+            preIngestStatisticsSqlPlan.put(statistic, transformer.generatePhysicalPlan(preIngestStatisticsLogicalPlan.get(statistic)));
+        }
+
+        // deduplication and versioning
+        LogicalPlan deduplicationAndVersioningLogicalPlan = planner.buildLogicalPlanForDeduplicationAndVersioning(resources);
+        Optional<SqlPlan> deduplicationAndVersioningSqlPlan = Optional.empty();
+        if (deduplicationAndVersioningLogicalPlan != null)
+        {
+            deduplicationAndVersioningSqlPlan = Optional.of(transformer.generatePhysicalPlan(deduplicationAndVersioningLogicalPlan));
+        }
+
+        Map<DedupAndVersionErrorSqlType, LogicalPlan> deduplicationAndVersioningErrorChecksLogicalPlan = planner.buildLogicalPlanForDeduplicationAndVersioningErrorChecks(resources);
+        Map<DedupAndVersionErrorSqlType, SqlPlan> deduplicationAndVersioningErrorChecksSqlPlan = new HashMap<>();
+        for (DedupAndVersionErrorSqlType statistic : deduplicationAndVersioningErrorChecksLogicalPlan.keySet())
+        {
+            deduplicationAndVersioningErrorChecksSqlPlan.put(statistic, transformer.generatePhysicalPlan(deduplicationAndVersioningErrorChecksLogicalPlan.get(statistic)));
+        }
+
+        // ingest
+        LogicalPlan ingestLogicalPlan = planner.buildLogicalPlanForIngest(resources);
+        SqlPlan ingestSqlPlan = transformer.generatePhysicalPlan(ingestLogicalPlan);
+
+        // metadata ingest
+        LogicalPlan metaDataIngestLogicalPlan = planner.buildLogicalPlanForMetadataIngest(resources);
+        SqlPlan metaDataIngestSqlPlan = transformer.generatePhysicalPlan(metaDataIngestLogicalPlan);
+
+        // post-actions
+        LogicalPlan postActionsLogicalPlan = planner.buildLogicalPlanForPostActions(resources);
+        SqlPlan postActionsSqlPlan = transformer.generatePhysicalPlan(postActionsLogicalPlan);
+
+        // post-run statistics
+        Map<StatisticName, LogicalPlan> postIngestStatisticsLogicalPlan = planner.buildLogicalPlanForPostRunStatistics(resources);
+        Map<StatisticName, SqlPlan> postIngestStatisticsSqlPlan = new HashMap<>();
+        for (StatisticName statistic : postIngestStatisticsLogicalPlan.keySet())
+        {
+            postIngestStatisticsSqlPlan.put(statistic, transformer.generatePhysicalPlan(postIngestStatisticsLogicalPlan.get(statistic)));
+        }
+
+        return GeneratorResult.builder()
+            .ingestSqlPlan(ingestSqlPlan)
+            .postActionsSqlPlan(postActionsSqlPlan)
+            .metadataIngestSqlPlan(metaDataIngestSqlPlan)
+            .deduplicationAndVersioningSqlPlan(deduplicationAndVersioningSqlPlan)
+            .putAllDeduplicationAndVersioningErrorChecksSqlPlan(deduplicationAndVersioningErrorChecksSqlPlan)
+            .putAllPreIngestStatisticsSqlPlan(preIngestStatisticsSqlPlan)
+            .putAllPostIngestStatisticsSqlPlan(postIngestStatisticsSqlPlan)
+            .preActionsSqlPlan(SqlPlan.builder().build())
             .build();
     }
 }
