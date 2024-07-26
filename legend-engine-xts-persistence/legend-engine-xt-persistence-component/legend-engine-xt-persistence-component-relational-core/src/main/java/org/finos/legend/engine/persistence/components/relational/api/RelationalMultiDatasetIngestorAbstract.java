@@ -30,6 +30,8 @@ import org.finos.legend.engine.persistence.components.logicalplan.datasets.Datas
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.DatasetReference;
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.DerivedDataset;
 import org.finos.legend.engine.persistence.components.logicalplan.datasets.SchemaDefinition;
+import org.finos.legend.engine.persistence.components.logicalplan.operations.Create;
+import org.finos.legend.engine.persistence.components.logicalplan.operations.Operation;
 import org.finos.legend.engine.persistence.components.logicalplan.values.BatchStartTimestampAbstract;
 import org.finos.legend.engine.persistence.components.planner.Planner;
 import org.finos.legend.engine.persistence.components.planner.Planners;
@@ -264,7 +266,7 @@ public abstract class RelationalMultiDatasetIngestorAbstract
                     .collectStatistics(collectStatistics())
                     .writeStatistics(collectStatistics()) // Collecting statistics will imply writing it into the batch metadata table
                     .skipMainAndMetadataDatasetCreation(false) // TODO: Should we expose this?
-                    .enableConcurrentSafety(true)
+                    .enableConcurrentSafety(false) //todo(rengam) : to discuss if this works or introduce new variable
                     .caseConversion(caseConversion())
                     .executionTimestampClock(executionTimestampClock())
                     .batchStartTimestampPattern(BATCH_START_TS_PATTERN)
@@ -319,6 +321,16 @@ public abstract class RelationalMultiDatasetIngestorAbstract
                 executor.executePhysicalPlan(generatorResult.preActionsSqlPlan());
             }
         }
+        createLockDataset();
+    }
+
+    private void createLockDataset()
+    {
+        List<Operation> operations = new ArrayList<>();
+        operations.add(Create.of(true, lockInfoDataset().get()));
+        LogicalPlan createLockDataset = LogicalPlan.of(operations);
+        SqlPlan createLockDatasetSqlPlan = transformer.generatePhysicalPlan(createLockDataset);
+        executor.executePhysicalPlan(createLockDatasetSqlPlan);
     }
 
     private void initializeLock()
@@ -329,7 +341,7 @@ public abstract class RelationalMultiDatasetIngestorAbstract
         try
         {
             LockInfoUtils lockInfoUtils = new LockInfoUtils(lockInfoDataset());
-            SqlPlan initializeLockSqlPlan = transformer.generatePhysicalPlan(LogicalPlan.of(Collections.singleton(lockInfoUtils.initializeLockInfoForMultiIngest(0L, BatchStartTimestampAbstract.INSTANCE))));
+            SqlPlan initializeLockSqlPlan = transformer.generatePhysicalPlan(LogicalPlan.of(Collections.singleton(lockInfoUtils.initializeLockInfoForMultiIngest(BatchStartTimestampAbstract.INSTANCE))));
             executor.executePhysicalPlan(initializeLockSqlPlan, placeHolderKeyValues);
         }
         catch (Exception e)
@@ -344,12 +356,10 @@ public abstract class RelationalMultiDatasetIngestorAbstract
         LOGGER.info("Concurrent safety is enabled, Acquiring lock");
         Map<String, PlaceholderValue> placeHolderKeyValues = new HashMap<>();
         placeHolderKeyValues.put(BATCH_START_TS_PATTERN, PlaceholderValue.of(LocalDateTime.now(executionTimestampClock()).format(DATE_TIME_FORMATTER), false));
-        // TODO: Instead of using the generator/planner to do this, we should build the logical plan here
-        // TODO: This step should also return the batch ID
         LockInfoUtils lockInfoUtils = new LockInfoUtils(lockInfoDataset());
-        SqlPlan acquireLockSqlPlan = transformer.generatePhysicalPlan(LogicalPlan.of(Collections.singleton(lockInfoUtils.updateLockInfoForMultiIngest(BatchStartTimestampAbstract.INSTANCE))));
+        SqlPlan acquireLockSqlPlan = transformer.generatePhysicalPlan(LogicalPlan.of(Collections.singleton(lockInfoUtils.updateLockInfoForMultiIngest(0L, BatchStartTimestampAbstract.INSTANCE))));
         executor.executePhysicalPlan(acquireLockSqlPlan, placeHolderKeyValues);
-        return 1;
+        return ApiUtils.getBatchIdFromLockTable(lockInfoUtils.getLogicalPlanForBatchIdValue(),executor, transformer);
     }
 
     private List<DatasetIngestResults> performIngestionForAllStages(long batchId, Map<String, PlaceholderValue> placeHolderKeyValues)
