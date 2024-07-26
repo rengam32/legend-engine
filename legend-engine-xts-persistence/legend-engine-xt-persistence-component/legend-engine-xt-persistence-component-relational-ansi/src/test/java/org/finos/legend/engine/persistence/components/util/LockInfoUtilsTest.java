@@ -43,13 +43,13 @@ public class LockInfoUtilsTest
     public void testInitializeLockInfo()
     {
         LockInfoUtils store = new LockInfoUtils(lockInfoDataset);
-        Insert operation = store.initializeLockInfo("main", BatchStartTimestamp.INSTANCE);
+        Insert operation = store.initializeLockInfo(BatchStartTimestamp.INSTANCE);
         RelationalTransformer transformer = new RelationalTransformer(AnsiSqlSink.get(), transformOptions);
         LogicalPlan logicalPlan = LogicalPlan.builder().addOps(operation).build();
         SqlPlan physicalPlan = transformer.generatePhysicalPlan(logicalPlan);
         List<String> list = physicalPlan.getSqlList();
-        String expectedSql = "INSERT INTO main_table_lock (\"insert_ts_utc\", \"table_name\") " +
-                "(SELECT '2000-01-01 00:00:00.000000','main' WHERE NOT (EXISTS (SELECT * FROM main_table_lock as main_table_lock)))";
+        String expectedSql = "INSERT INTO main_table_lock (\"insert_ts_utc\") " +
+                "(SELECT '2000-01-01 00:00:00.000000' WHERE NOT (EXISTS (SELECT * FROM main_table_lock as main_table_lock)))";
         Assertions.assertEquals(expectedSql, list.get(0));
     }
 

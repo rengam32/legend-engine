@@ -186,6 +186,7 @@ class RelationalMultiDatasetIngestorTest extends BaseTest
         // Run ingestion
         ingestor.init(datasetIngestDetails, JdbcConnection.of(h2Sink.connection()));
         ingestor.create();
+        createLockTable(lockDataset);
         List<DatasetIngestResults> actual = ingestor.ingest();
 
         // Verify results
@@ -288,5 +289,10 @@ class RelationalMultiDatasetIngestorTest extends BaseTest
     {
         Map<String, Object> expectedStatsWithStringKey = expectedStats.keySet().stream().collect(Collectors.toMap(Enum::name, expectedStats::get));
         verifyStats(expectedStatsWithStringKey, actualStats);
+    }
+
+    private void createLockTable(String lockTable)
+    {
+        h2Sink.executeStatement("CREATE TABLE TEST." + lockTable + " (insert_ts_utc DATETIME, last_used_ts_utc DATETIME, batch_id INT)");
     }
 }

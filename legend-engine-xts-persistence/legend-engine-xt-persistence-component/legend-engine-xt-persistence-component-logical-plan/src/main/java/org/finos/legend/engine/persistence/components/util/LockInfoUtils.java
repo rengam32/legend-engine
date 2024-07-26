@@ -39,13 +39,23 @@ public class LockInfoUtils
         this.dataset = lockInfoDataset.get();
     }
 
-    public Insert initializeLockInfo(String tableName, BatchStartTimestamp batchStartTimestamp)
+    public Insert initializeLockInfo(BatchStartTimestamp batchStartTimestamp)
     {
         DatasetReference metaTableRef = this.dataset.datasetReference();
         FieldValue insertTimeField = FieldValue.builder().datasetRef(metaTableRef).fieldName(lockInfoDataset.insertTimeField()).build();
-        FieldValue tableNameField = FieldValue.builder().datasetRef(metaTableRef).fieldName(lockInfoDataset.tableNameField()).build();
-        List<Value> insertFields = Arrays.asList(insertTimeField, tableNameField);
-        List<Value> selectFields = Arrays.asList(batchStartTimestamp, StringValue.of(tableName));
+        List<Value> insertFields = Arrays.asList(insertTimeField);
+        List<Value> selectFields = Arrays.asList(batchStartTimestamp);
+        Condition condition = Not.of(Exists.of(Selection.builder().addFields(All.INSTANCE).source(dataset).build()));
+        return Insert.of(dataset, Selection.builder().addAllFields(selectFields).condition(condition).build(), insertFields);
+    }
+
+    public Insert initializeLockInfoForMultiIngest(long batchId, BatchStartTimestamp batchStartTimestamp)
+    {
+        DatasetReference metaTableRef = this.dataset.datasetReference();
+        FieldValue insertTimeField = FieldValue.builder().datasetRef(metaTableRef).fieldName(lockInfoDataset.insertTimeField()).build();
+        FieldValue batchIdField = FieldValue.builder().datasetRef(metaTableRef).fieldName(lockInfoDataset.batchIdField()).build();
+        List<Value> insertFields = Arrays.asList(insertTimeField, batchIdField);
+        List<Value> selectFields = Arrays.asList(batchStartTimestamp, NumericalValue.of(batchId));
         Condition condition = Not.of(Exists.of(Selection.builder().addFields(All.INSTANCE).source(dataset).build()));
         return Insert.of(dataset, Selection.builder().addAllFields(selectFields).condition(condition).build(), insertFields);
     }
@@ -54,6 +64,17 @@ public class LockInfoUtils
     {
         List<Pair<FieldValue, Value>> keyValuePairs = new ArrayList<>();
         keyValuePairs.add(Pair.of(FieldValue.builder().datasetRef(dataset.datasetReference()).fieldName(lockInfoDataset.lastUsedTimeField()).build(), batchStartTimestamp));
+        Update update = Update.builder().dataset(dataset).addAllKeyValuePairs(keyValuePairs).build();
+        return update;
+    }
+
+    public Update updateLockInfoForMultiIngest(BatchStartTimestamp batchStartTimestamp)
+    {
+        List<Pair<FieldValue, Value>> keyValuePairs = new ArrayList<>();
+        FieldValue batchIdField = FieldValue.builder().datasetRef(this.dataset.datasetReference()).fieldName(lockInfoDataset.batchIdField()).build();
+        SelectValue batchIdValue = SelectValue.of(Selection.builder().source(dataset).addFields(SumBinaryValueOperator.of(batchIdField, NumericalValue.of(1L))).build());
+        keyValuePairs.add(Pair.of(FieldValue.builder().datasetRef(dataset.datasetReference()).fieldName(lockInfoDataset.lastUsedTimeField()).build(), batchStartTimestamp));
+        keyValuePairs.add(Pair.of(FieldValue.builder().datasetRef(dataset.datasetReference()).fieldName(lockInfoDataset.batchIdField()).build(), batchIdValue));
         Update update = Update.builder().dataset(dataset).addAllKeyValuePairs(keyValuePairs).build();
         return update;
     }
